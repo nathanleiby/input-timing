@@ -1,0 +1,5 @@
+- for each frame with input
+  - display frame time
+  - display input that happened in that frame
+- capture midi input
+  - display midi time
