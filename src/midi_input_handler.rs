@@ -9,7 +9,7 @@ use std::collections::HashSet;
 
 use macroquad::prelude::*;
 
-use crate::midi::MidiInput;
+use crate::midi::{MidiInput, MidiInputDataRaw};
 
 // General use
 pub const ALL_INSTRUMENTS: [Instrument; 10] = [
@@ -32,20 +32,7 @@ pub const BEATS_PER_LOOP: f64 = 16.;
 #[derive(Debug, Clone)]
 pub struct UserHit {
     pub instrument: Instrument,
-    pub clock_tick: f64,
-}
-
-impl UserHit {
-    pub fn new(instrument: Instrument, clock_tick: f64) -> Self {
-        Self {
-            instrument,
-            clock_tick,
-        }
-    }
-
-    pub fn beat(self: &Self) -> f64 {
-        self.clock_tick % BEATS_PER_LOOP
-    }
+    pub raw_data: MidiInputDataRaw,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,10 +51,7 @@ pub enum Instrument {
 }
 
 pub enum Events {
-    UserHit {
-        instrument: Instrument,
-        processing_delay: f64,
-    },
+    Hit(UserHit),
 }
 
 pub struct MidiInputHandler {
@@ -99,13 +83,7 @@ impl MidiInputHandler {
 
                 // for each hit, calculate the processing delay and correct the clock time
                 for hit in &hits {
-                    // let processing_delay_ms = now_ms - hit.clock_tick as u128;
-                    //// TODO: needs work
-                    let processing_delay_ms = 0;
-                    events.push(Events::UserHit {
-                        instrument: hit.instrument,
-                        processing_delay: processing_delay_ms as f64 / 1000.,
-                    })
+                    events.push(Events::Hit(hit.clone()));
                 }
 
                 // let processing_delay = now - ; // is this better called "input latency"?
@@ -223,11 +201,13 @@ fn get_midi_as_user_hits(midi_input: &MidiInput) -> Vec<UserHit> {
 
     // for each pressed_midi, check if it's in the ic_midi and then add to out as a proper UserHit if so
     for midi in pressed_midi {
-        log::debug!("midi: {:?}", midi); // TODO: compare timestamps
-        let timestamp = midi.timestamp as f64;
+        println!("midi = {:?}", midi);
         for ins in ALL_INSTRUMENTS.iter() {
             if ic_midi.get_note_numbers(ins).contains(&midi.note_number) {
-                out.push(UserHit::new(*ins, timestamp));
+                out.push(UserHit {
+                    instrument: *ins,
+                    raw_data: midi,
+                });
             }
         }
     }

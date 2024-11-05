@@ -5,6 +5,7 @@
 */
 
 use log::info;
+use macroquad::time::get_time;
 use midir;
 use std::collections::HashMap;
 use std::string::*;
@@ -26,11 +27,14 @@ pub struct MidiInput {
 #[derive(Eq, Clone, Debug, Copy, PartialEq)]
 pub struct MidiInputDataRaw {
     pub note_number: u8,
-    pub timestamp: u64,
-    pub non_midi_timestamp_ms: u128,
+    pub midi_timestamp_ms: u64,
     // https://www.logosfoundation.org/kursus/1075.html
     status: u8,
     note_velocity: u8,
+
+    // NON MIDI
+    pub non_midi_timestamp_ms: u128,
+    pub macroquad_timestame_ms: usize,
 }
 
 impl MidiInputDataRaw {
@@ -103,13 +107,18 @@ impl MidiInput {
                     self.device_name.as_str(),
                     move |stamp, message, _| {
                         // get timestamp
+                        // TODO: Is there a delay between this callback and the actual midi time? maybe things are batched and delayed.
+                        // ... Ideally we might in the future understand the midi timestamp better,
+                        //      vs just adding another timestamp for "data collected at X time"
                         let non_midi_timestamp_ms = current_time_millis();
+                        let macroquad_timestame_ms = 0; //(get_time() * 1000.) as usize;
                         let midi_function = message[0];
                         let note_number = message[1];
                         let v = MidiInputDataRaw {
                             note_number,
-                            timestamp: stamp,
+                            midi_timestamp_ms: stamp,
                             non_midi_timestamp_ms,
+                            macroquad_timestame_ms,
                             status: midi_function,
                             note_velocity: message[2],
                         };
